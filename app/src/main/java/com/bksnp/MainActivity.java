@@ -47,14 +47,14 @@ public class MainActivity extends Activity {
 
         mWebSettings = mWebView.getSettings();           // 세부 세팅 등록
         mWebSettings.setJavaScriptEnabled(true);         // 자바스크립트 허용
-        mWebSettings.setSupportMultipleWindows(true);   // 새창 띄우기 허용 여부
-        mWebSettings.setJavaScriptCanOpenWindowsAutomatically(true);  // 자바스크립트 새창 띄우기(멀티뷰) 허용 여부
+        //mWebSettings.setSupportMultipleWindows(true);   // 새창 띄우기 허용 여부
+        //mWebSettings.setJavaScriptCanOpenWindowsAutomatically(true);  // 자바스크립트 새창 띄우기(멀티뷰) 허용 여부
         mWebSettings.setLoadWithOverviewMode(true);      // 메타태그 허용여부
         mWebSettings.setUseWideViewPort(true);           // 화면 사이즈 맟주기 허용 여부
         mWebSettings.setSupportZoom(false);              // 화면 줌 허용 여부
         mWebSettings.setBuiltInZoomControls(false);      // 화면 확대 축소 허용 여부
         mWebSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING);   // 컨텐츠 사이즈 맞추기
-        mWebSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);       // 브라우저 캐시 허용 여부
+        //mWebSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);       // 브라우저 캐시 허용 여부
         mWebSettings.setDomStorageEnabled(true);         // 로커저장소 허용 여부
 
         // 자바스크립트 등록
@@ -146,7 +146,7 @@ public class MainActivity extends Activity {
 
         /**
          * Internal File read
-         * @param data
+         * @param fileKey
          */
         @android.webkit.JavascriptInterface
         public void callReadStorage(String fileKey) {
@@ -192,7 +192,8 @@ public class MainActivity extends Activity {
                           @Override
                           public void run() {
                               Log.i("BKSNP", "onBackPressed call");
-                              mWebView.evaluateJavascript("setBackButton()", null);  // loadUrl("javascript:setBackButton()");
+                              //mWebView.evaluateJavascript("setBackButton()", null);  // loadUrl("javascript:setBackButton()");
+                              mWebView.loadUrl("javascript:setBackButton()");
                           }
                       });
 //
