@@ -14,6 +14,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.Log;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -33,6 +34,8 @@ public class MainActivity extends Activity {
 
     private static final int REQUEST_CAMERA = 100;
     private static final int REQUEST_ALBUM = 101;
+
+    private Context mContext;
 
     @SuppressLint("JavascriptInterface")
     @Override
@@ -60,6 +63,7 @@ public class MainActivity extends Activity {
         // 자바스크립트 등록
         mWebView.addJavascriptInterface(new OpenCallInterface(), "bksnp");
 
+        mContext =  getApplicationContext();
 
         mWebView.loadUrl("file:///android_asset/index.html");  // http://google.co.kr");  // 웹뷰에 표시할 URL
     }
@@ -177,6 +181,21 @@ public class MainActivity extends Activity {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
+                }
+            });
+        }
+
+        /**
+         * Device Key return
+         */
+        @android.webkit.JavascriptInterface
+        public void callDeviceKey() {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    String key = Settings.Secure.getString(mContext.getContentResolver(), Settings.Secure.ANDROID_ID);
+                    Log.i("BKSNP", "Device key : " + key);
+
                 }
             });
         }
