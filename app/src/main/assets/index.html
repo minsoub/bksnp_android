@@ -1,0 +1,39 @@
+<html>
+<head>Text</head>
+<script language="javascript">
+    function CallCamera() {
+        window.bksnp.callCamera();
+    }
+    function CallAlbum() {
+        window.bksnp.callAlbum();
+    }
+
+    // 안드로이드 storage 파일의 read가 완료되었을 때 호출되는 메소드
+    function setReadStorage(data) {
+        alert(data);
+    }
+    function callWriteStorage(fileKey, data) {
+        window.bksnp.callWriteStorage(fileKey, data);
+    }
+    function callReadStorage(fileKey) {
+        window.bksnp.callReadStorage(fileKey);
+    }
+
+    // 뒤로가기 버튼시 호출되는 메소드
+    function setBackButton() {
+        alert("뒤로가기 버튼 눌러짐");
+    }
+</script>
+<body>
+<h1>API Help</h1><br>
+
+<h1>
+1. Test camera call <a href="javascript:CallCamera();">Camera</a><br>
+2. Test Album call <a href="javascript:CallAlbum();">Album</a><br>
+3. Test storage save <a href="javascript:callWriteStorage('test.txt', 'dataaadafafa');">Storage Save</a><br>
+4. Test storage read <a href="javascript:callReadStorage('test.txt');">Storead Read</a><br>
+5. setBackButton : 안드로이드에서 뒤로가기 버튼 클릭시 호출됨<br>
+
+</h1>
+</body>
+</html>
