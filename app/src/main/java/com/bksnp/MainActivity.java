@@ -16,6 +16,7 @@ import android.os.Handler;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -30,14 +31,14 @@ import java.io.InputStreamReader;
 public class MainActivity extends Activity {
     private WebView mWebView;    // WebView define
     private WebSettings mWebSettings;   // WebView setting
-    private Handler mHandler = new Handler();
+    private final Handler mHandler = new Handler();
 
     private static final int REQUEST_CAMERA = 100;
     private static final int REQUEST_ALBUM = 101;
 
     private Context mContext;
 
-    @SuppressLint("JavascriptInterface")
+    //@SuppressLint("JavascriptInterface")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,10 +61,11 @@ public class MainActivity extends Activity {
         //mWebSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);       // 브라우저 캐시 허용 여부
         mWebSettings.setDomStorageEnabled(true);         // 로커저장소 허용 여부
 
-        // 자바스크립트 등록
-        mWebView.addJavascriptInterface(new OpenCallInterface(), "bksnp");
-
         mContext =  getApplicationContext();
+        // 자바스크립트 등록
+        mWebView.addJavascriptInterface(new OpenCallInterface(this), "bksnp");
+
+
 
         mWebView.loadUrl("file:///android_asset/index.html");  // http://google.co.kr");  // 웹뷰에 표시할 URL
     }
@@ -71,13 +73,16 @@ public class MainActivity extends Activity {
     /**
      * API 오픈
      */
-    final class OpenCallInterface {
-        OpenCallInterface() {}
+    private class OpenCallInterface {
+        Context context;
+        OpenCallInterface(Context c) {
+            context = c;
+        }
 
         /**
          * 앨범 Open
          */
-        @android.webkit.JavascriptInterface
+        @JavascriptInterface
         public void callAlbum() {
             mHandler.post(new Runnable() {
                 @Override
@@ -99,7 +104,7 @@ public class MainActivity extends Activity {
         /**
          * 카메라 오픈
          */
-        @android.webkit.JavascriptInterface
+        @JavascriptInterface
         public void callCamera() {
             mHandler.post(new Runnable() {
                 @Override
@@ -126,7 +131,7 @@ public class MainActivity extends Activity {
          * @param fileKey
          * @param data
          */
-        @android.webkit.JavascriptInterface
+        @JavascriptInterface
         public void callWriteStorage(String fileKey, String data) {
             mHandler.post(new Runnable() {
                 @Override
@@ -152,7 +157,7 @@ public class MainActivity extends Activity {
          * Internal File read
          * @param fileKey
          */
-        @android.webkit.JavascriptInterface
+        @JavascriptInterface
         public void callReadStorage(String fileKey) {
             mHandler.post(new Runnable() {
                 @Override
@@ -188,14 +193,14 @@ public class MainActivity extends Activity {
         /**
          * Device Key return
          */
-        @android.webkit.JavascriptInterface
+        @JavascriptInterface
         public void callDeviceKey() {
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    String key = Settings.Secure.getString(mContext.getContentResolver(), Settings.Secure.ANDROID_ID);
+                    String key = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
                     Log.i("BKSNP", "Device key : " + key);
-
+                    mWebView.loadUrl("javascript:getDeviceKey('"+key+"')");
                 }
             });
         }

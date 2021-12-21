@@ -1,6 +1,6 @@
 <html>
 <head>Text</head>
-<script language="javascript">
+<script type="text/javascript">
     function CallCamera() {
         window.bksnp.callCamera();
     }
@@ -10,7 +10,9 @@
 
     // 안드로이드 storage 파일의 read가 완료되었을 때 호출되는 메소드
     function setReadStorage(data) {
-        alert(data);
+        console.log(data);
+        //location.href="http://google.co.kr";
+        //alert(data);
     }
     function callWriteStorage(fileKey, data) {
         window.bksnp.callWriteStorage(fileKey, data);
@@ -23,9 +25,15 @@
         window.bksnp.callDeviceKey();
     }
 
+    // Device get
+    function getDeviceKey(key) {
+        console.log(key);
+        //alert(key);
+    }
+
     // 뒤로가기 버튼시 호출되는 메소드
     function setBackButton() {
-        alert("뒤로가기 버튼 눌러짐");
+        console.log("뒤로가기 버튼 눌러짐");
     }
 
 
