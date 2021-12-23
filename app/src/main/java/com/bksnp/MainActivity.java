@@ -1,5 +1,6 @@
 package com.bksnp;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -20,13 +21,22 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
+
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Scanner;
 
 public class MainActivity extends Activity {
     private WebView mWebView;    // WebView define
@@ -37,6 +47,8 @@ public class MainActivity extends Activity {
     private static final int REQUEST_ALBUM = 101;
 
     private Context mContext;
+    private DatabaseReference mRef;
+    private String url = "https://bksnp-ec823-default-rtdb.asia-southeast1.firebasedatabase.app";
 
     //@SuppressLint("JavascriptInterface")
     @Override
@@ -65,9 +77,14 @@ public class MainActivity extends Activity {
         // 자바스크립트 등록
         mWebView.addJavascriptInterface(new OpenCallInterface(this), "bksnp");
 
-
-
         mWebView.loadUrl("file:///android_asset/index.html");  // http://google.co.kr");  // 웹뷰에 표시할 URL
+
+        // firebase define
+        final FirebaseDatabase database = FirebaseDatabase.getInstance("https://bksnp-ec823-default-rtdb.asia-southeast1.firebasedatabase.app");
+        mRef = database.getReference("msg");
+        //mRef = FirebaseDatabase.getInstance().getReferenceFromUrl(url); // .getReference();
+
+        readFirebase();
     }
 
     /**
@@ -191,6 +208,70 @@ public class MainActivity extends Activity {
         }
 
         /**
+         * Base64 Internal File write
+         * @param fileKey
+         * @param data
+         */
+        @JavascriptInterface
+        public void callBase64WriteStorage(String fileKey, String data) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    Log.i("BKSNP", "callBase64WriteStorage call");
+                    Log.i("BKSNP", "Parameter fileKey : " + fileKey+", data : " + data);
+                    FileOutputStream fos = null;
+                    try {
+                        fos = openFileOutput(fileKey, Context.MODE_PRIVATE);
+                        fos.write(data.getBytes());
+                        fos.close();;
+
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
+
+        /**
+         * Base64 Internal File read
+         * @param fileKey
+         */
+        @JavascriptInterface
+        public void callBase64ReadStorage(String fileKey) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    Log.i("BKSNP", "callBase64ReadStorage call");
+                    Log.i("BKSNP", "Parameter fileKey : " + fileKey);
+                    StringBuffer buffer = new StringBuffer();
+                    String data = null;
+                    FileInputStream fis = null;
+                    try {
+                        fis = openFileInput(fileKey);
+                        BufferedReader iReader = new BufferedReader(new InputStreamReader((fis)));
+
+                        data = iReader.readLine();
+                        while(data != null)
+                        {
+                            buffer.append(data);
+                            data = iReader.readLine();
+                        }
+                        buffer.append("\n");
+                        iReader.close();
+                        Log.i("BKSNP", "read data : " + buffer.toString());
+                        mWebView.loadUrl("javascript:setBase64ReadStorage('"+buffer.toString()+"')");
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
+
+        /**
          * Device Key return
          */
         @JavascriptInterface
@@ -201,6 +282,30 @@ public class MainActivity extends Activity {
                     String key = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
                     Log.i("BKSNP", "Device key : " + key);
                     mWebView.loadUrl("javascript:getDeviceKey('"+key+"')");
+                }
+            });
+        }
+
+        /**
+         * Application cache read
+         */
+        @JavascriptInterface
+        public void callCacheRead(String key) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    File cacheFile = new File(context.getCacheDir(), key);
+                    try {
+                        Scanner scanner = new Scanner(cacheFile);
+                        StringBuffer sb = new StringBuffer();
+                        while(scanner.hasNext()) {
+                            String str = scanner.nextLine();
+                            sb.append(str);
+                        }
+                        mWebView.loadUrl("javascript:readCache('"+sb.toString()+"')");
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    }
                 }
             });
         }
@@ -229,6 +334,32 @@ public class MainActivity extends Activity {
 //                mWebView.evaluateJavascript("setBackButton()", null);  // loadUrl("javascript:setBackButton()");
 //            }
 //        });
+    }
+
+    /**
+     * Firebase read message
+     */
+    private void readFirebase() {
+        //mDatabase.child("msg").child("1").addValueEventListener(new ValueEventListener() {
+        mRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                // Get Post object and use the values to update the UI
+                if(dataSnapshot.getValue(String.class) != null){
+                    String msg = dataSnapshot.getValue(String.class);
+                    Log.w("FireBaseData", "getData =>" + msg);
+                    mWebView.loadUrl("javascript:getNotification('"+msg+"')");
+                } else {
+                    Toast.makeText(MainActivity.this, "데이터 없음...", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+                // Getting Post failed, log a message
+                Log.w("FireBaseData", "loadPost:onCancelled", databaseError.toException());
+            }
+        });
     }
 }
 
