@@ -1,14 +1,22 @@
 package com.bksnp;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.os.Build;
@@ -18,16 +26,22 @@ import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
+import android.webkit.JsResult;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -36,8 +50,12 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Random;
 import java.util.Scanner;
 
+/**
+ * MainActivity Class
+ */
 public class MainActivity extends Activity {
     private WebView mWebView;    // WebView define
     private WebSettings mWebSettings;   // WebView setting
@@ -45,16 +63,50 @@ public class MainActivity extends Activity {
 
     private static final int REQUEST_CAMERA = 100;
     private static final int REQUEST_ALBUM = 101;
+    private final String channel_id = "BKSNP_CHA_ID";
 
     private Context mContext;
     private DatabaseReference mRef;
     private String url = "https://bksnp-ec823-default-rtdb.asia-southeast1.firebasedatabase.app";
 
+    private String TAG = "BKSNP";
+
+    private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            // TODO Auto-generated method stub
+            // Get extra data included in the Intent
+            String message = intent.getStringExtra("message");
+            Log.d("receiver", "Got message: " + message);
+            mWebView.loadUrl("javascript:getNotification('"+message+"')");
+        }
+    };
     //@SuppressLint("JavascriptInterface")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Token 가져오기
+        FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(new OnCompleteListener<String>() {
+                    @Override
+                    public void onComplete(@NonNull Task<String> task) {
+                        if (!task.isSuccessful()) {
+                            Log.w(TAG, "Fetching FCM registration token failed", task.getException());
+                            return;
+                        }
+
+                        // Get new FCM registration token
+                        String token = task.getResult();
+
+                        // Log and toast
+                        String msg = getString(R.string.msg_token_fmt, token);
+                        Log.d(TAG, msg);
+                        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                    }
+                });
+
 
         // WebView Start
         mWebView = (WebView) findViewById(R.id.webView);
@@ -79,12 +131,48 @@ public class MainActivity extends Activity {
 
         mWebView.loadUrl("file:///android_asset/index.html");  // http://google.co.kr");  // 웹뷰에 표시할 URL
 
-        // firebase define
-        final FirebaseDatabase database = FirebaseDatabase.getInstance("https://bksnp-ec823-default-rtdb.asia-southeast1.firebasedatabase.app");
-        mRef = database.getReference("msg");
-        //mRef = FirebaseDatabase.getInstance().getReferenceFromUrl(url); // .getReference();
+//        // firebase define
+//        final FirebaseDatabase database = FirebaseDatabase.getInstance("https://bksnp-ec823-default-rtdb.asia-southeast1.firebasedatabase.app");
+//        mRef = database.getReference("msg");
+//        //mRef = FirebaseDatabase.getInstance().getReferenceFromUrl(url); // .getReference();
+//
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//            // 채널 만들기
+//            String displayName = "BKSNP";
+//            String descriptionText = "This is BKSNP channel";
+//            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+//            NotificationChannel  channel = new NotificationChannel(channel_id, displayName, importance);
+//            channel.setDescription(descriptionText); // 시스템에 채널 등록하기.
+//            NotificationManager notificationManager = getSystemService(NotificationManager.class);
+//            notificationManager.createNotificationChannel(channel);
+//        }
+//
+//        readFirebase();
 
-        readFirebase();
+        // Web에서 자바스크립트 alert을 허용하게 한다.
+        mWebView.setWebChromeClient(new WebChromeClient(){
+            @Override
+            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+                return super.onJsAlert(view, url, message, result);
+            }
+        });
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+                mMessageReceiver, new IntentFilter(String.valueOf(R.string.bksnp_event_name))  // "bksnp-event")
+        );
+    }
+    @Override
+    protected void onPause() {
+        super.onPause();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
+    }
+
+    public void getMessage(String msg) {
+        Log.d(TAG, msg);
     }
 
     /**
@@ -341,19 +429,83 @@ public class MainActivity extends Activity {
      */
     private void readFirebase() {
         //mDatabase.child("msg").child("1").addValueEventListener(new ValueEventListener() {
-        mRef.addValueEventListener(new ValueEventListener() {
+        mRef.addChildEventListener(new ChildEventListener() {
             @Override
-            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
-                // Get Post object and use the values to update the UI
-                if(dataSnapshot.getValue(String.class) != null){
-                    String msg = dataSnapshot.getValue(String.class);
+            public void onChildAdded(@NonNull DataSnapshot dataSnapshot, @Nullable String previousChildName) {
+                Log.w("FireBaseData", "onChildAdded called..");
+                String msg = dataSnapshot.getValue(String.class);
+                Log.w("FireBaseData", msg);
+//                for(DataSnapshot ds : dataSnapshot.getChildren()) {
+//                    String msg = ds.getValue(String.class); // ds.child("data").getValue(String.class);
                     Log.w("FireBaseData", "getData =>" + msg);
                     mWebView.loadUrl("javascript:getNotification('"+msg+"')");
-                } else {
-                    Toast.makeText(MainActivity.this, "데이터 없음...", Toast.LENGTH_SHORT).show();
-                }
+                    NotificationCompat.Builder builder = null;
+                    String channel_id_set = "";
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        channel_id_set = channel_id;
+                    }
+                    builder = new NotificationCompat.Builder(mContext, channel_id_set)
+                            .setSmallIcon(R.drawable.notification_icon)
+                            .setContentTitle("BKSNP 알림")
+                            .setContentText(msg)
+                            .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+                    NotificationManagerCompat notificationManager = NotificationManagerCompat.from(mContext);
+
+                    // notificationId is a unique int for each notification that you must define
+                    Random notification_id = new Random();
+                    notificationManager.notify(notification_id.nextInt(100), builder.build());
+                //}
             }
 
+            @Override
+            public void onChildChanged(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+                Log.w("FireBaseData", "onChildChanged called..");
+            }
+
+            @Override
+            public void onChildRemoved(@NonNull DataSnapshot snapshot) {
+                Log.w("FireBaseData", "onChildRemoved called..");
+            }
+
+            @Override
+            public void onChildMoved(@NonNull DataSnapshot snapshot, @Nullable String previousChildName) {
+                Log.w("FireBaseData", "onChildMoved called..");
+            }
+
+//            @Override
+//            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+//                // Get Post object and use the values to update the UI
+//
+//                for(DataSnapshot ds : dataSnapshot.getChildren()) {
+//                    String msg = ds.getValue(String.class); // ds.child("data").getValue(String.class);
+//                    Log.w("FireBaseData", "getData =>" + msg);
+//                    mWebView.loadUrl("javascript:getNotification('"+msg+"')");
+//                    NotificationCompat.Builder builder = null;
+//                    String channel_id_set = "";
+//                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+//                        channel_id_set = channel_id;
+//                    }
+//                    builder = new NotificationCompat.Builder(mContext, channel_id_set)
+//                            .setSmallIcon(R.drawable.notification_icon)
+//                            .setContentTitle("BKSNP 알림")
+//                            .setContentText(msg)
+//                            .setPriority(NotificationCompat.PRIORITY_DEFAULT);
+//                    NotificationManagerCompat notificationManager = NotificationManagerCompat.from(mContext);
+//
+//                    // notificationId is a unique int for each notification that you must define
+//                    Random notification_id = new Random();
+//                    notificationManager.notify(notification_id.nextInt(100), builder.build());
+//                }
+
+//                if(dataSnapshot.getValue(String.class) != null){
+//                    String msg = dataSnapshot.getValue(String.class);
+//                    Log.w("FireBaseData", "getData =>" + msg);
+//                    mWebView.loadUrl("javascript:getNotification('"+msg+"')");
+//                } else {
+//                    Toast.makeText(MainActivity.this, "데이터 없음...", Toast.LENGTH_SHORT).show();
+//                }
+//            }
+//
             @Override
             public void onCancelled(@NonNull DatabaseError databaseError) {
                 // Getting Post failed, log a message
