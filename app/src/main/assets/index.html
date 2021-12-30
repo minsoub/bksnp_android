@@ -70,6 +70,16 @@
         alert(msg);
     }
 
+    // Firebase token read
+    function callFirebaseToken() {
+        window.bksnp.callFirebaseToken();
+    }
+    // return firebase token data from android
+    function readFirebaseToken(token) {
+        console.log(token);
+        alert(token);
+    }
+
 
 </script>
 <body>
@@ -84,8 +94,9 @@
 6. Base64 storage read <a href="javascript:callBase64ReadStorage('test.jpeg');">Base64 Storead Read</a><br>
 7. Test Device Key read <a href="javascript:callDeviceKey();">Device Key Read</a><br>
 8. Application cache read <a href="javascript:callCacheRead('test.txt');">Application Cache read</a><br>
-9. getNotification(msg) : 안드로이드에서 Notification이 왔을 때 호출되는 메소드<br>
-10. setBackButton : 안드로이드에서 뒤로가기 버튼 클릭시 호출됨<br>
+9. Firebase Token read <a href="javascript:callFirebaseToken();">Firebase Token read</a><br>
+10. getNotification(msg) : 안드로이드에서 Notification이 왔을 때 호출되는 메소드<br>
+11. setBackButton : 안드로이드에서 뒤로가기 버튼 클릭시 호출됨<br>
 </h1>
 </body>
 </html>

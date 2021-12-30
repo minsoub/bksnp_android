@@ -19,3 +19,13 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-keepattributes *Annotation*
+-keepattributes JavascriptInterface
+-keep public class com.bksnp.MainActivity$OpenCallInterface
+-keep public class * implements com.bksnp.MainActivity$OpenCallInterface
+-keepclassmembers class com.bksnp.MainActivity$OpenCallInterface {
+    <methods>;
+}

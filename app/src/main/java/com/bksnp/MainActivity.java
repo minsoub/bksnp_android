@@ -61,15 +61,12 @@ public class MainActivity extends Activity {
     private WebSettings mWebSettings;   // WebView setting
     private final Handler mHandler = new Handler();
 
-    private static final int REQUEST_CAMERA = 100;
-    private static final int REQUEST_ALBUM = 101;
-    private final String channel_id = "BKSNP_CHA_ID";
-
     private Context mContext;
     private DatabaseReference mRef;
-    private String url = "https://bksnp-ec823-default-rtdb.asia-southeast1.firebasedatabase.app";
+    //private String url = "https://bksnp-ec823-default-rtdb.asia-southeast1.firebasedatabase.app";
 
     private String TAG = "BKSNP";
+    private String mToken = "";
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -99,11 +96,12 @@ public class MainActivity extends Activity {
 
                         // Get new FCM registration token
                         String token = task.getResult();
+                        mToken = token;
 
                         // Log and toast
                         String msg = getString(R.string.msg_token_fmt, token);
                         Log.d(TAG, msg);
-                        Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+                        //Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
                     }
                 });
 
@@ -129,7 +127,7 @@ public class MainActivity extends Activity {
         // 자바스크립트 등록
         mWebView.addJavascriptInterface(new OpenCallInterface(this), "bksnp");
 
-        mWebView.loadUrl("file:///android_asset/index.html");  // http://google.co.kr");  // 웹뷰에 표시할 URL
+        mWebView.loadUrl("file:///android_asset/index.html");  //Constants.LOAD_URL// http://google.co.kr");  // 웹뷰에 표시할 URL
 
 //        // firebase define
 //        final FirebaseDatabase database = FirebaseDatabase.getInstance("https://bksnp-ec823-default-rtdb.asia-southeast1.firebasedatabase.app");
@@ -178,7 +176,7 @@ public class MainActivity extends Activity {
     /**
      * API 오픈
      */
-    private class OpenCallInterface {
+    public class OpenCallInterface {
         Context context;
         OpenCallInterface(Context c) {
             context = c;
@@ -201,7 +199,7 @@ public class MainActivity extends Activity {
 
                     Intent intent = new Intent( Intent.ACTION_PICK );
                     intent.setType( MediaStore.Images.Media.CONTENT_TYPE );
-                    startActivityForResult( intent, REQUEST_ALBUM );
+                    startActivityForResult( intent, Constants.REQUEST_ALBUM );
                 }
             });
         }
@@ -397,6 +395,25 @@ public class MainActivity extends Activity {
                 }
             });
         }
+
+        /**
+         * firebase token data read
+         */
+        @JavascriptInterface
+        public void callFirebaseToken() {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    mWebView.loadUrl("javascript:readFirebaseToken('"+mToken+"')");
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void test() {
+            Log.i("BKSNP", "test called...");
+        }
+
     }
 
     /**
@@ -413,15 +430,6 @@ public class MainActivity extends Activity {
                               mWebView.loadUrl("javascript:setBackButton()");
                           }
                       });
-//
-//        mHandler.post(new Runnable() {
-//            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-//            @Override
-//            public void run() {
-//                Log.i("BKSNP", "onBackPressed call");
-//                mWebView.evaluateJavascript("setBackButton()", null);  // loadUrl("javascript:setBackButton()");
-//            }
-//        });
     }
 
     /**
@@ -442,7 +450,7 @@ public class MainActivity extends Activity {
                     NotificationCompat.Builder builder = null;
                     String channel_id_set = "";
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        channel_id_set = channel_id;
+                        channel_id_set = Constants.CHANNEL_ID;
                     }
                     builder = new NotificationCompat.Builder(mContext, channel_id_set)
                             .setSmallIcon(R.drawable.notification_icon)
