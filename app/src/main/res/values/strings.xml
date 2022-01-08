@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BKSNP</string>
+    <string name="app_name">Ohnion</string>
     <string name="default_notification_channel_id">BKSNP_CHA_ID</string>
     <string name="default_notification_channel_name">BKSNP Channel</string>
     <string name="msg_token_fmt">Token %s</string>

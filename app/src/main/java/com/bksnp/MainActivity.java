@@ -4,10 +4,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.NotificationChannel;
@@ -19,14 +21,19 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
+import android.os.Parcelable;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
 import android.webkit.JavascriptInterface;
 import android.webkit.JsResult;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -34,6 +41,8 @@ import android.webkit.WebViewClient;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.ChildEventListener;
 import com.google.firebase.database.DataSnapshot;
@@ -41,6 +50,10 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.dynamiclinks.DynamicLink;
+import com.google.firebase.dynamiclinks.FirebaseDynamicLinks;
+import com.google.firebase.dynamiclinks.PendingDynamicLinkData;
+import com.google.firebase.dynamiclinks.ShortDynamicLink;
 import com.google.firebase.messaging.FirebaseMessaging;
 
 import java.io.BufferedReader;
@@ -63,10 +76,24 @@ public class MainActivity extends Activity {
 
     private Context mContext;
     private DatabaseReference mRef;
-    //private String url = "https://bksnp-ec823-default-rtdb.asia-southeast1.firebasedatabase.app";
-
+    private MediaFileService mService;
     private String TAG = "BKSNP";
     private String mToken = "";
+    private Uri mFileUri;
+    private String mFilePath;
+    private ValueCallback mFilePathCallback;
+    private ValueCallback<Uri> mUploadMessage;
+    private String mCameraPhotoPath;
+    private Uri mCapturedImageURI;
+
+    // Storage Permissions
+    private static final int REQUEST_EXTERNAL_STORAGE = 1;
+    private static final int INPUT_FILE_REQUEST_CODE = 701;
+    private static final int FILECHOOSER_RESULTCODE = 702;
+    private static String[] PERMISSIONS_STORAGE = {
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE
+    };
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -105,6 +132,7 @@ public class MainActivity extends Activity {
                     }
                 });
 
+        verifyStoragePermissions(this);
 
         // WebView Start
         mWebView = (WebView) findViewById(R.id.webView);
@@ -124,28 +152,11 @@ public class MainActivity extends Activity {
         mWebSettings.setDomStorageEnabled(true);         // 로커저장소 허용 여부
 
         mContext =  getApplicationContext();
+        mService = new MediaFileService(mContext);
         // 자바스크립트 등록
         mWebView.addJavascriptInterface(new OpenCallInterface(this), "bksnp");
 
         mWebView.loadUrl("file:///android_asset/index.html");  //Constants.LOAD_URL// http://google.co.kr");  // 웹뷰에 표시할 URL
-
-//        // firebase define
-//        final FirebaseDatabase database = FirebaseDatabase.getInstance("https://bksnp-ec823-default-rtdb.asia-southeast1.firebasedatabase.app");
-//        mRef = database.getReference("msg");
-//        //mRef = FirebaseDatabase.getInstance().getReferenceFromUrl(url); // .getReference();
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-//            // 채널 만들기
-//            String displayName = "BKSNP";
-//            String descriptionText = "This is BKSNP channel";
-//            int importance = NotificationManager.IMPORTANCE_DEFAULT;
-//            NotificationChannel  channel = new NotificationChannel(channel_id, displayName, importance);
-//            channel.setDescription(descriptionText); // 시스템에 채널 등록하기.
-//            NotificationManager notificationManager = getSystemService(NotificationManager.class);
-//            notificationManager.createNotificationChannel(channel);
-//        }
-//
-//        readFirebase();
 
         // Web에서 자바스크립트 alert을 허용하게 한다.
         mWebView.setWebChromeClient(new WebChromeClient(){
@@ -154,6 +165,280 @@ public class MainActivity extends Activity {
                 return super.onJsAlert(view, url, message, result);
             }
         });
+
+        mWebView.setWebChromeClient(new WebChromeClient() {
+            // For Android 5.0
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> filePath, WebChromeClient.FileChooserParams fileChooserParams) {
+                // Double check that we don't have any existing callbacks
+                if (mFilePathCallback != null) {
+                    mFilePathCallback.onReceiveValue(null);
+                }
+                mFilePathCallback = filePath;
+
+                Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+                    // Create the File where the photo should go
+                    File photoFile = null;
+                    //try {
+                        photoFile = mService.getOutputMediaFile(MediaFileService.MEDIA_TYPE_IMAGE);  // createImageFile();
+                        takePictureIntent.putExtra("PhotoPath", mCameraPhotoPath);
+                    //} catch (IOException ex) {
+                        // Error occurred while creating the File
+                    //    Log.e(TAG, "Unable to create Image File", ex);
+                    //}
+
+                    // Continue only if the File was successfully created
+                    if (photoFile != null) {
+                        mCameraPhotoPath = "file:" + photoFile.getAbsolutePath();
+                        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
+                                Uri.fromFile(photoFile));
+                    } else {
+                        takePictureIntent = null;
+                    }
+                }
+
+                Intent contentSelectionIntent = new Intent(Intent.ACTION_GET_CONTENT);
+                contentSelectionIntent.addCategory(Intent.CATEGORY_OPENABLE);
+                contentSelectionIntent.setType("image/*");
+
+                Intent[] intentArray;
+                if (takePictureIntent != null) {
+                    intentArray = new Intent[]{takePictureIntent};
+                } else {
+                    intentArray = new Intent[0];
+                }
+
+                Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
+                chooserIntent.putExtra(Intent.EXTRA_INTENT, contentSelectionIntent);
+                chooserIntent.putExtra(Intent.EXTRA_TITLE, "Image Chooser");
+                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, intentArray);
+
+                startActivityForResult(chooserIntent, INPUT_FILE_REQUEST_CODE);
+
+                return true;
+            }
+
+            // openFileChooser for Android 3.0+
+            public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType) {
+
+                mUploadMessage = uploadMsg;
+                // Create AndroidExampleFolder at sdcard
+                // Create AndroidExampleFolder at sdcard
+
+                File imageStorageDir = new File(
+                        Environment.getExternalStoragePublicDirectory(
+                                Environment.DIRECTORY_PICTURES)
+                        , "AndroidExampleFolder");
+
+                if (!imageStorageDir.exists()) {
+                    // Create AndroidExampleFolder at sdcard
+                    imageStorageDir.mkdirs();
+                }
+
+                // Create camera captured image file path and name
+                File file = new File(
+                        imageStorageDir + File.separator + "IMG_"
+                                + String.valueOf(System.currentTimeMillis())
+                                + ".jpg");
+
+                mCapturedImageURI = Uri.fromFile(file);
+
+                // Camera capture image intent
+                final Intent captureIntent = new Intent(
+                        android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+
+                captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCapturedImageURI);
+
+                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                i.setType("image/*");
+
+                // Create file chooser intent
+                Intent chooserIntent = Intent.createChooser(i, "Image Chooser");
+
+                // Set camera intent to file chooser
+                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS
+                        , new Parcelable[] { captureIntent });
+
+                // On select image call onActivityResult method of activity
+                startActivityForResult(chooserIntent, FILECHOOSER_RESULTCODE);
+            }
+
+            // openFileChooser for Android < 3.0
+            public void openFileChooser(ValueCallback<Uri> uploadMsg) {
+                openFileChooser(uploadMsg, "");
+            }
+
+            //openFileChooser for other Android versions
+            public void openFileChooser(ValueCallback<Uri> uploadMsg,
+                                        String acceptType,
+                                        String capture) {
+
+                openFileChooser(uploadMsg, acceptType);
+            }
+        });
+
+        FirebaseDynamicLinks.getInstance()
+                .getDynamicLink(getIntent())
+                .addOnSuccessListener(this, new OnSuccessListener<PendingDynamicLinkData>() {
+                    @Override
+                    public void onSuccess(PendingDynamicLinkData pendingDynamicLinkData) {
+                        Uri deepLink = null;
+                        try {
+                            if (pendingDynamicLinkData != null) {
+                                deepLink = pendingDynamicLinkData.getLink();
+                                mWebView.loadUrl(deepLink.toString());
+                            }
+                        }
+                        catch (Exception e){
+                            e.printStackTrace();
+                        }
+                    }
+                })
+                .addOnFailureListener(this, new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.d("링크/에러", String.valueOf(e));
+                    }
+                });
+    }
+
+    /**
+     * Checks if the app has permission to write to device storage
+     *
+     * If the app does not has permission then the user will be prompted to grant permissions
+     *
+     * @param activity
+     */
+    public static void verifyStoragePermissions(Activity activity) {
+        // Check if we have write permission
+        int permission = ActivityCompat.checkSelfPermission(activity, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
+        if (permission != PackageManager.PERMISSION_GRANTED) {
+            // We don't have permission so prompt the user
+            ActivityCompat.requestPermissions(
+                    activity,
+                    PERMISSIONS_STORAGE,
+                    REQUEST_EXTERNAL_STORAGE
+            );
+        }
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+
+            if (requestCode != INPUT_FILE_REQUEST_CODE || mFilePathCallback == null) {
+                super.onActivityResult(requestCode, resultCode, data);
+                return;
+            }
+            Uri[] results = null;
+
+            // Check that the response is a good one
+            if (resultCode == Activity.RESULT_OK) {
+                if (data == null) {
+                    // If there is not data, then we may have taken a photo
+                    if (mCameraPhotoPath != null) {
+                        results = new Uri[]{Uri.parse(mCameraPhotoPath)};
+                    }
+                } else {
+                    String dataString = data.getDataString();
+                    if (dataString != null) {
+                        results = new Uri[]{Uri.parse(dataString)};
+                    }
+                }
+            }
+            mFilePathCallback.onReceiveValue(results);
+            mFilePathCallback = null;
+
+        } else if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.KITKAT) {
+            if (requestCode != FILECHOOSER_RESULTCODE || mUploadMessage == null) {
+                super.onActivityResult(requestCode, resultCode, data);
+                return;
+            }
+            if (requestCode == FILECHOOSER_RESULTCODE) {
+
+                if (null == this.mUploadMessage) {
+                    return;
+                }
+                Uri result = null;
+                try {
+                    if (resultCode != RESULT_OK) {
+                        result = null;
+                    } else {
+                        // retrieve from the private variable if the intent is null
+                        result = data == null ? mCapturedImageURI : data.getData();
+                    }
+                } catch (Exception e) {
+                    Toast.makeText(getApplicationContext(), "activity :" + e,
+                            Toast.LENGTH_LONG).show();
+                }
+
+                mUploadMessage.onReceiveValue(result);
+                mUploadMessage = null;
+            }
+        }
+        return;
+//        super.onActivityResult(requestCode, resultCode, data);
+//        if (resultCode == Activity.RESULT_CANCELED) return;
+//
+//        System.out.println("onActivityResult called..........");
+//        Log.d(TAG, "requestCode => " + requestCode);
+//        if (requestCode == Constants.REQUEST_CAMERA) {
+//            //Uri uri = getLastCaptureImageUri();
+//            Log.d(TAG, "Camera => " + mFileUri);
+//            //jpg형식
+//            //Log.d(TAG, "Camera data => " + mService.base64ReadData(mService.getPath()));
+//            String snd = null;
+//            //synchronized (this) {
+//            try {
+//                snd = mService.base64ReadData(mService.getPath());
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+//            Log.d(TAG, "Camera data1 => " + snd);
+//            //}
+//            try {
+//                Thread.sleep(5000);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//            String tt = "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";
+//            Log.d(TAG, "Camera text size => " + tt.length());
+//            //mWebView.loadUrl("javascript:setCameraData('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')");
+//            String returnData = "javascript:setCameraData('"+snd+"')";
+//            Log.d(TAG, "Camera data2 => " + returnData);
+//            Log.d(TAG, "Camera data2 size => " + returnData.length());
+//            mWebView.loadUrl(returnData);  // "javascript:setCameraData('"+snd+"')");
+//            Log.d(TAG, "Camera data2 => " + snd);
+////            String finalSnd = snd;
+////            mHandler.post(new Runnable() {
+////                @Override
+////                public void run() {
+////                    Log.d(TAG, "Camera data => " + finalSnd);
+////                    mWebView.loadUrl("javascript:setCameraData('"+ finalSnd +"')");
+////                    mWebView.loadUrl("javascript:setCameraData('test2')");
+////                }
+////            });
+//        }else if (requestCode == Constants.REQUEST_ALBUM) {
+//            mHandler.post(new Runnable() {
+//                @Override
+//                public void run() {
+//                    Uri uri = data.getData();
+//                    Log.d(TAG, "Album => " + uri);
+//                    //Log.d(TAG, "Album data => " + mService.base64ReadData(mService.getPathFromUri(uri)));
+//                    String snd = null;
+//                    try {
+//                        snd = mService.base64ReadData(mService.getPathFromUri(uri));
+//                    } catch (IOException e) {
+//                        e.printStackTrace();
+//                    }
+//                    Log.d(TAG, "Album data => " +snd);
+//                    mWebView.loadUrl("javascript:setAlbumData('"+snd+"')");
+//                }
+//            });
+//        }
     }
 
     @Override
@@ -168,7 +453,6 @@ public class MainActivity extends Activity {
         super.onPause();
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
     }
-
     public void getMessage(String msg) {
         Log.d(TAG, msg);
     }
@@ -190,15 +474,9 @@ public class MainActivity extends Activity {
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    //startActivity(getPackageManager().getLaunchIntentForPackage("PACKAGENAME");
-//                    Intent intent = new Intent();
-//                    intent.setAction(Intent.ACTION_GET_CONTENT); // ACTION_PICK은 사용하지 말것, deprecated + formally
-//                    intent.setType("image/*");
-//                    ((Activity)mContext).startActivityForResult(Intent.createChooser(intent, "Get Album"), REQUEST_TAKE_ALBUM);
-
-
                     Intent intent = new Intent( Intent.ACTION_PICK );
                     intent.setType( MediaStore.Images.Media.CONTENT_TYPE );
+                    intent.setData(MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
                     startActivityForResult( intent, Constants.REQUEST_ALBUM );
                 }
             });
@@ -212,19 +490,31 @@ public class MainActivity extends Activity {
             mHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    Intent i = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
-                    try {
-                        PackageManager pm = getPackageManager();
+                    // create Intent to take a picture and return control to the calling application
+                    Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
-                        final ResolveInfo mInfo = pm.resolveActivity(i, 0);
+                    mFileUri = mService.getOutputMediaFileUri(MediaFileService.MEDIA_TYPE_IMAGE); // create a file to save the image
+                    intent.putExtra(MediaStore.EXTRA_OUTPUT, mFileUri); // set the image file name
 
-                        Intent intent = new Intent();
-                        intent.setComponent(new ComponentName(mInfo.activityInfo.packageName, mInfo.activityInfo.name));
-                        intent.setAction(Intent.ACTION_MAIN);
-                        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+                    // start the image capture Intent
+                    startActivityForResult(intent, Constants.REQUEST_CAMERA);
 
-                        startActivity(intent);
-                    } catch (Exception e){ Log.i("TAG", "Unable to launch camera: " + e); }
+//                    Intent i = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+//                    try {
+//                        PackageManager pm = getPackageManager();
+//
+//                        final ResolveInfo mInfo = pm.resolveActivity(i, 0);
+//
+//                        Intent intent = new Intent();
+//                        intent.setComponent(new ComponentName(mInfo.activityInfo.packageName, mInfo.activityInfo.name));
+//                        intent.setAction(Intent.ACTION_MAIN);
+//                        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+//
+//                        Uri fileUri = mService.getOutputMediaFileUri(MediaFileService.MEDIA_TYPE_IMAGE);
+//                        intent.putExtra(MediaStore.EXTRA_OUTPUT, fileUri);
+//
+//                        startActivityForResult(intent, Constants.REQUEST_CAMERA);
+//                    } catch (Exception e){ Log.i("TAG", "Unable to launch camera: " + e); }
                 }
             });
         }
@@ -414,6 +704,18 @@ public class MainActivity extends Activity {
             Log.i("BKSNP", "test called...");
         }
 
+        @JavascriptInterface
+        public void sharedTeengle(String subject, String url, String image_url) {
+            Log.d(TAG, "sharedTeengle called...");
+            Create_DynamicLink(subject, url, image_url);
+//            mHandler.post(new Runnable() {
+//                @Override
+//                public void run() {
+//                    Create_DynamicLink(subject, url, image_url);
+//                }
+//            });
+        }
+
     }
 
     /**
@@ -520,6 +822,44 @@ public class MainActivity extends Activity {
                 Log.w("FireBaseData", "loadPost:onCancelled", databaseError.toException());
             }
         });
+    }
+
+    public void Create_DynamicLink(final String subject, String PageURL, String ImgUrl){
+        Log.d(TAG, getPackageName());
+        Task<ShortDynamicLink> shortLinkTask = FirebaseDynamicLinks.getInstance().createDynamicLink()
+                .setLink(Uri.parse(PageURL))
+                .setDomainUriPrefix("https://ohnion.page.link/")  // eNh4")
+                .setAndroidParameters(
+                        new DynamicLink.AndroidParameters.Builder(getPackageName())
+                                .build())
+                .setSocialMetaTagParameters(
+                        new DynamicLink.SocialMetaTagParameters.Builder()
+                                .setTitle("친구에게 공유하기")
+                                .setImageUrl(Uri.parse(ImgUrl))
+                                .build())
+                .buildShortDynamicLink()
+                .addOnCompleteListener(this, new OnCompleteListener<ShortDynamicLink>() {
+                    @Override
+                    public void onComplete(@NonNull Task<ShortDynamicLink> task) {
+                        Log.d(TAG, "task called...");
+                        if (task.isSuccessful()) {
+                            Uri ShortLink = task.getResult().getShortLink();
+                            try {
+                                Intent Sharing_Intent = new Intent();
+                                Sharing_Intent.setAction(Intent.ACTION_SEND);
+                                Sharing_Intent.putExtra(Intent.EXTRA_SUBJECT, subject);
+                                Sharing_Intent.putExtra(Intent.EXTRA_TEXT, ShortLink.toString());
+                                Sharing_Intent.setType("text/plain");
+                                startActivity(Intent.createChooser(Sharing_Intent, "친구에게 공유하기"));
+                            }
+                            catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }else {
+                            Log.d(TAG, task.getException().toString());
+                        }
+                    }
+                });
     }
 }
 
