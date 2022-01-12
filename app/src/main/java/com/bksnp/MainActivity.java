@@ -156,8 +156,8 @@ public class MainActivity extends Activity {
         // 자바스크립트 등록
         mWebView.addJavascriptInterface(new OpenCallInterface(this), "bksnp");
 
-        mWebView.loadUrl("file:///android_asset/index.html");  //Constants.LOAD_URL// http://google.co.kr");  // 웹뷰에 표시할 URL
-
+        //mWebView.loadUrl("file:///android_asset/index.html");  //Constants.LOAD_URL// http://google.co.kr");  // 웹뷰에 표시할 URL
+        mWebView.loadUrl(Constants.LOAD_URL);  // 웹뷰에 표시할 URL
         // Web에서 자바스크립트 alert을 허용하게 한다.
         mWebView.setWebChromeClient(new WebChromeClient(){
             @Override
@@ -166,117 +166,117 @@ public class MainActivity extends Activity {
             }
         });
 
-        mWebView.setWebChromeClient(new WebChromeClient() {
-            // For Android 5.0
-            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> filePath, WebChromeClient.FileChooserParams fileChooserParams) {
-                // Double check that we don't have any existing callbacks
-                if (mFilePathCallback != null) {
-                    mFilePathCallback.onReceiveValue(null);
-                }
-                mFilePathCallback = filePath;
-
-                Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-                    // Create the File where the photo should go
-                    File photoFile = null;
-                    //try {
-                        photoFile = mService.getOutputMediaFile(MediaFileService.MEDIA_TYPE_IMAGE);  // createImageFile();
-                        takePictureIntent.putExtra("PhotoPath", mCameraPhotoPath);
-                    //} catch (IOException ex) {
-                        // Error occurred while creating the File
-                    //    Log.e(TAG, "Unable to create Image File", ex);
-                    //}
-
-                    // Continue only if the File was successfully created
-                    if (photoFile != null) {
-                        mCameraPhotoPath = "file:" + photoFile.getAbsolutePath();
-                        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
-                                Uri.fromFile(photoFile));
-                    } else {
-                        takePictureIntent = null;
-                    }
-                }
-
-                Intent contentSelectionIntent = new Intent(Intent.ACTION_GET_CONTENT);
-                contentSelectionIntent.addCategory(Intent.CATEGORY_OPENABLE);
-                contentSelectionIntent.setType("image/*");
-
-                Intent[] intentArray;
-                if (takePictureIntent != null) {
-                    intentArray = new Intent[]{takePictureIntent};
-                } else {
-                    intentArray = new Intent[0];
-                }
-
-                Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
-                chooserIntent.putExtra(Intent.EXTRA_INTENT, contentSelectionIntent);
-                chooserIntent.putExtra(Intent.EXTRA_TITLE, "Image Chooser");
-                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, intentArray);
-
-                startActivityForResult(chooserIntent, INPUT_FILE_REQUEST_CODE);
-
-                return true;
-            }
-
-            // openFileChooser for Android 3.0+
-            public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType) {
-
-                mUploadMessage = uploadMsg;
-                // Create AndroidExampleFolder at sdcard
-                // Create AndroidExampleFolder at sdcard
-
-                File imageStorageDir = new File(
-                        Environment.getExternalStoragePublicDirectory(
-                                Environment.DIRECTORY_PICTURES)
-                        , "AndroidExampleFolder");
-
-                if (!imageStorageDir.exists()) {
-                    // Create AndroidExampleFolder at sdcard
-                    imageStorageDir.mkdirs();
-                }
-
-                // Create camera captured image file path and name
-                File file = new File(
-                        imageStorageDir + File.separator + "IMG_"
-                                + String.valueOf(System.currentTimeMillis())
-                                + ".jpg");
-
-                mCapturedImageURI = Uri.fromFile(file);
-
-                // Camera capture image intent
-                final Intent captureIntent = new Intent(
-                        android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
-
-                captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCapturedImageURI);
-
-                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
-                i.addCategory(Intent.CATEGORY_OPENABLE);
-                i.setType("image/*");
-
-                // Create file chooser intent
-                Intent chooserIntent = Intent.createChooser(i, "Image Chooser");
-
-                // Set camera intent to file chooser
-                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS
-                        , new Parcelable[] { captureIntent });
-
-                // On select image call onActivityResult method of activity
-                startActivityForResult(chooserIntent, FILECHOOSER_RESULTCODE);
-            }
-
-            // openFileChooser for Android < 3.0
-            public void openFileChooser(ValueCallback<Uri> uploadMsg) {
-                openFileChooser(uploadMsg, "");
-            }
-
-            //openFileChooser for other Android versions
-            public void openFileChooser(ValueCallback<Uri> uploadMsg,
-                                        String acceptType,
-                                        String capture) {
-
-                openFileChooser(uploadMsg, acceptType);
-            }
-        });
+//        mWebView.setWebChromeClient(new WebChromeClient() {
+//            // For Android 5.0
+//            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> filePath, WebChromeClient.FileChooserParams fileChooserParams) {
+//                // Double check that we don't have any existing callbacks
+//                if (mFilePathCallback != null) {
+//                    mFilePathCallback.onReceiveValue(null);
+//                }
+//                mFilePathCallback = filePath;
+//
+//                Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+//                if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+//                    // Create the File where the photo should go
+//                    File photoFile = null;
+//                    //try {
+//                        photoFile = mService.getOutputMediaFile(MediaFileService.MEDIA_TYPE_IMAGE);  // createImageFile();
+//                        takePictureIntent.putExtra("PhotoPath", mCameraPhotoPath);
+//                    //} catch (IOException ex) {
+//                        // Error occurred while creating the File
+//                    //    Log.e(TAG, "Unable to create Image File", ex);
+//                    //}
+//
+//                    // Continue only if the File was successfully created
+//                    if (photoFile != null) {
+//                        mCameraPhotoPath = "file:" + photoFile.getAbsolutePath();
+//                        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
+//                                Uri.fromFile(photoFile));
+//                    } else {
+//                        takePictureIntent = null;
+//                    }
+//                }
+//
+//                Intent contentSelectionIntent = new Intent(Intent.ACTION_GET_CONTENT);
+//                contentSelectionIntent.addCategory(Intent.CATEGORY_OPENABLE);
+//                contentSelectionIntent.setType("image/*");
+//
+//                Intent[] intentArray;
+//                if (takePictureIntent != null) {
+//                    intentArray = new Intent[]{takePictureIntent};
+//                } else {
+//                    intentArray = new Intent[0];
+//                }
+//
+//                Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
+//                chooserIntent.putExtra(Intent.EXTRA_INTENT, contentSelectionIntent);
+//                chooserIntent.putExtra(Intent.EXTRA_TITLE, "Image Chooser");
+//                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, intentArray);
+//
+//                startActivityForResult(chooserIntent, INPUT_FILE_REQUEST_CODE);
+//
+//                return true;
+//            }
+//
+//            // openFileChooser for Android 3.0+
+//            public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType) {
+//
+//                mUploadMessage = uploadMsg;
+//                // Create AndroidExampleFolder at sdcard
+//                // Create AndroidExampleFolder at sdcard
+//
+//                File imageStorageDir = new File(
+//                        Environment.getExternalStoragePublicDirectory(
+//                                Environment.DIRECTORY_PICTURES)
+//                        , "AndroidExampleFolder");
+//
+//                if (!imageStorageDir.exists()) {
+//                    // Create AndroidExampleFolder at sdcard
+//                    imageStorageDir.mkdirs();
+//                }
+//
+//                // Create camera captured image file path and name
+//                File file = new File(
+//                        imageStorageDir + File.separator + "IMG_"
+//                                + String.valueOf(System.currentTimeMillis())
+//                                + ".jpg");
+//
+//                mCapturedImageURI = Uri.fromFile(file);
+//
+//                // Camera capture image intent
+//                final Intent captureIntent = new Intent(
+//                        android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+//
+//                captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCapturedImageURI);
+//
+//                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+//                i.addCategory(Intent.CATEGORY_OPENABLE);
+//                i.setType("image/*");
+//
+//                // Create file chooser intent
+//                Intent chooserIntent = Intent.createChooser(i, "Image Chooser");
+//
+//                // Set camera intent to file chooser
+//                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS
+//                        , new Parcelable[] { captureIntent });
+//
+//                // On select image call onActivityResult method of activity
+//                startActivityForResult(chooserIntent, FILECHOOSER_RESULTCODE);
+//            }
+//
+//            // openFileChooser for Android < 3.0
+//            public void openFileChooser(ValueCallback<Uri> uploadMsg) {
+//                openFileChooser(uploadMsg, "");
+//            }
+//
+//            //openFileChooser for other Android versions
+//            public void openFileChooser(ValueCallback<Uri> uploadMsg,
+//                                        String acceptType,
+//                                        String capture) {
+//
+//                openFileChooser(uploadMsg, acceptType);
+//            }
+//        });
 
         FirebaseDynamicLinks.getInstance()
                 .getDynamicLink(getIntent())
@@ -327,118 +327,154 @@ public class MainActivity extends Activity {
     @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-
-            if (requestCode != INPUT_FILE_REQUEST_CODE || mFilePathCallback == null) {
-                super.onActivityResult(requestCode, resultCode, data);
-                return;
-            }
-            Uri[] results = null;
-
-            // Check that the response is a good one
-            if (resultCode == Activity.RESULT_OK) {
-                if (data == null) {
-                    // If there is not data, then we may have taken a photo
-                    if (mCameraPhotoPath != null) {
-                        results = new Uri[]{Uri.parse(mCameraPhotoPath)};
-                    }
-                } else {
-                    String dataString = data.getDataString();
-                    if (dataString != null) {
-                        results = new Uri[]{Uri.parse(dataString)};
-                    }
-                }
-            }
-            mFilePathCallback.onReceiveValue(results);
-            mFilePathCallback = null;
-
-        } else if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.KITKAT) {
-            if (requestCode != FILECHOOSER_RESULTCODE || mUploadMessage == null) {
-                super.onActivityResult(requestCode, resultCode, data);
-                return;
-            }
-            if (requestCode == FILECHOOSER_RESULTCODE) {
-
-                if (null == this.mUploadMessage) {
-                    return;
-                }
-                Uri result = null;
-                try {
-                    if (resultCode != RESULT_OK) {
-                        result = null;
-                    } else {
-                        // retrieve from the private variable if the intent is null
-                        result = data == null ? mCapturedImageURI : data.getData();
-                    }
-                } catch (Exception e) {
-                    Toast.makeText(getApplicationContext(), "activity :" + e,
-                            Toast.LENGTH_LONG).show();
-                }
-
-                mUploadMessage.onReceiveValue(result);
-                mUploadMessage = null;
-            }
-        }
-        return;
-//        super.onActivityResult(requestCode, resultCode, data);
-//        if (resultCode == Activity.RESULT_CANCELED) return;
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
 //
-//        System.out.println("onActivityResult called..........");
-//        Log.d(TAG, "requestCode => " + requestCode);
-//        if (requestCode == Constants.REQUEST_CAMERA) {
-//            //Uri uri = getLastCaptureImageUri();
-//            Log.d(TAG, "Camera => " + mFileUri);
-//            //jpg형식
-//            //Log.d(TAG, "Camera data => " + mService.base64ReadData(mService.getPath()));
-//            String snd = null;
-//            //synchronized (this) {
-//            try {
-//                snd = mService.base64ReadData(mService.getPath());
-//            } catch (IOException e) {
-//                e.printStackTrace();
+//            if (requestCode != INPUT_FILE_REQUEST_CODE || mFilePathCallback == null) {
+//                super.onActivityResult(requestCode, resultCode, data);
+//                return;
 //            }
-//            Log.d(TAG, "Camera data1 => " + snd);
-//            //}
-//            try {
-//                Thread.sleep(5000);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
+//            Uri[] results = null;
+//
+//            // Check that the response is a good one
+//            if (resultCode == Activity.RESULT_OK) {
+//                if (data == null) {
+//                    // If there is not data, then we may have taken a photo
+//                    if (mCameraPhotoPath != null) {
+//                        results = new Uri[]{Uri.parse(mCameraPhotoPath)};
+//                    }
+//                } else {
+//                    String dataString = data.getDataString();
+//                    if (dataString != null) {
+//                        results = new Uri[]{Uri.parse(dataString)};
+//                    }
+//                }
 //            }
-//            String tt = "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";
-//            Log.d(TAG, "Camera text size => " + tt.length());
-//            //mWebView.loadUrl("javascript:setCameraData('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')");
-//            String returnData = "javascript:setCameraData('"+snd+"')";
-//            Log.d(TAG, "Camera data2 => " + returnData);
-//            Log.d(TAG, "Camera data2 size => " + returnData.length());
-//            mWebView.loadUrl(returnData);  // "javascript:setCameraData('"+snd+"')");
-//            Log.d(TAG, "Camera data2 => " + snd);
-////            String finalSnd = snd;
-////            mHandler.post(new Runnable() {
-////                @Override
-////                public void run() {
-////                    Log.d(TAG, "Camera data => " + finalSnd);
-////                    mWebView.loadUrl("javascript:setCameraData('"+ finalSnd +"')");
-////                    mWebView.loadUrl("javascript:setCameraData('test2')");
-////                }
-////            });
-//        }else if (requestCode == Constants.REQUEST_ALBUM) {
+//            mFilePathCallback.onReceiveValue(results);
+//            mFilePathCallback = null;
+//
+//        } else if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.KITKAT) {
+//            if (requestCode != FILECHOOSER_RESULTCODE || mUploadMessage == null) {
+//                super.onActivityResult(requestCode, resultCode, data);
+//                return;
+//            }
+//            if (requestCode == FILECHOOSER_RESULTCODE) {
+//
+//                if (null == this.mUploadMessage) {
+//                    return;
+//                }
+//                Uri result = null;
+//                try {
+//                    if (resultCode != RESULT_OK) {
+//                        result = null;
+//                    } else {
+//                        // retrieve from the private variable if the intent is null
+//                        result = data == null ? mCapturedImageURI : data.getData();
+//                    }
+//                } catch (Exception e) {
+//                    Toast.makeText(getApplicationContext(), "activity :" + e,
+//                            Toast.LENGTH_LONG).show();
+//                }
+//
+//                mUploadMessage.onReceiveValue(result);
+//                mUploadMessage = null;
+//            }
+//        }
+//        return;
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == Activity.RESULT_CANCELED) return;
+
+        System.out.println("onActivityResult called..........");
+        Log.d(TAG, "requestCode => " + requestCode);
+        if (requestCode == Constants.REQUEST_CAMERA) {
+            //Uri uri = getLastCaptureImageUri();
+            Log.d(TAG, "Camera => " + mFileUri);
+            //jpg형식
+            //Log.d(TAG, "Camera data => " + mService.base64ReadData(mService.getPath()));
+            String snd = null;
+            //synchronized (this) {
+            try {
+                snd = mService.base64ReadData(mService.getPath());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            Log.d(TAG, "Camera data => " + snd);
+            Log.d(TAG, "length => " + snd.length());
+
+            // data를 분리한다.
+            if (snd.length() > 512) {
+                int index = 0;
+                int readLength = 513;
+                String readData = "";
+                while(true) {
+                    readData = snd.substring(index, readLength);
+                    mWebView.loadUrl("javascript:addCameraData('"+ readData +"')");
+
+                    index = readLength;
+                    if (snd.length() > (index+512)) {
+                        readLength += 513;
+                        continue;
+                    }else {
+                        readData = snd.substring(index);
+                        mWebView.loadUrl("javascript:addCameraData('"+ readData +"')");
+                        break;
+                    }
+                }
+                mWebView.loadUrl("javascript:setCameraData('')");
+            }else {
+                mWebView.loadUrl("javascript:addCameraData('"+ snd +"')");
+                mWebView.loadUrl("javascript:setCameraData('')");
+            }
+//            String finalSnd = snd;
 //            mHandler.post(new Runnable() {
 //                @Override
 //                public void run() {
-//                    Uri uri = data.getData();
-//                    Log.d(TAG, "Album => " + uri);
-//                    //Log.d(TAG, "Album data => " + mService.base64ReadData(mService.getPathFromUri(uri)));
-//                    String snd = null;
-//                    try {
-//                        snd = mService.base64ReadData(mService.getPathFromUri(uri));
-//                    } catch (IOException e) {
-//                        e.printStackTrace();
-//                    }
-//                    Log.d(TAG, "Album data => " +snd);
-//                    mWebView.loadUrl("javascript:setAlbumData('"+snd+"')");
+//                    Log.d(TAG, "Camera data => " + finalSnd);
+//                    mWebView.loadUrl("javascript:setCameraData('"+ finalSnd +"')");
+//                    mWebView.loadUrl("javascript:setCameraData('test2')");
 //                }
 //            });
-//        }
+        }else if (requestCode == Constants.REQUEST_ALBUM) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    Uri uri = data.getData();
+                    Log.d(TAG, "Album => " + uri);
+                    //Log.d(TAG, "Album data => " + mService.base64ReadData(mService.getPathFromUri(uri)));
+                    String snd = null;
+                    try {
+                        snd = mService.base64ReadData(mService.getPathFromUri(uri));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    Log.d(TAG, "Album data => " +snd);
+                    Log.d(TAG, "length => " + snd.length());
+                    // data를 분리한다.
+                    if (snd.length() > 512) {
+                        int index = 0;
+                        int readLength = 513;
+                        String readData = "";
+                        while(true) {
+                            readData = snd.substring(index, readLength);
+                            mWebView.loadUrl("javascript:addAlbumData('"+ readData +"')");
+
+                            index = readLength;
+                            if (snd.length() > (index+512)) {
+                                readLength += 513;
+                                continue;
+                            }else {
+                                readData = snd.substring(index);
+                                mWebView.loadUrl("javascript:addAlbumData('"+ readData +"')");
+                                break;
+                            }
+                        }
+                        mWebView.loadUrl("javascript:setAlbumData('')");
+                    }else {
+                        mWebView.loadUrl("javascript:addAlbumData('"+ snd +"')");
+                        mWebView.loadUrl("javascript:setAlbumData('')");
+                    }
+                }
+            });
+        }
     }
 
     @Override
@@ -551,10 +587,10 @@ public class MainActivity extends Activity {
          * @param fileKey
          */
         @JavascriptInterface
-        public void callReadStorage(String fileKey) {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
+        public String callReadStorage(String fileKey) {
+            //mHandler.post(new Runnable() {
+            //    @Override
+            //    public void run() {
                     Log.i("BKSNP", "callReadStorage call");
                     Log.i("BKSNP", "Parameter fileKey : " + fileKey);
                     StringBuffer buffer = new StringBuffer();
@@ -573,14 +609,17 @@ public class MainActivity extends Activity {
                         buffer.append("\n");
                         iReader.close();
                         Log.i("BKSNP", "read data : " + buffer.toString());
-                        mWebView.loadUrl("javascript:setReadStorage('"+buffer.toString()+"')");
+                        //mWebView.loadUrl("javascript:setReadStorage('"+buffer.toString()+"')");
+
+                        return buffer.toString();
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                }
-            });
+                    return "";
+            //    }
+            //});
         }
 
         /**
@@ -615,10 +654,10 @@ public class MainActivity extends Activity {
          * @param fileKey
          */
         @JavascriptInterface
-        public void callBase64ReadStorage(String fileKey) {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
+        public String callBase64ReadStorage(String fileKey) {
+            //mHandler.post(new Runnable() {
+           //     @Override
+           //     public void run() {
                     Log.i("BKSNP", "callBase64ReadStorage call");
                     Log.i("BKSNP", "Parameter fileKey : " + fileKey);
                     StringBuffer buffer = new StringBuffer();
@@ -637,39 +676,42 @@ public class MainActivity extends Activity {
                         buffer.append("\n");
                         iReader.close();
                         Log.i("BKSNP", "read data : " + buffer.toString());
-                        mWebView.loadUrl("javascript:setBase64ReadStorage('"+buffer.toString()+"')");
+                        //mWebView.loadUrl("javascript:setBase64ReadStorage('"+buffer.toString()+"')");
+                        return buffer.toString();
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                }
-            });
+                    return "";
+           //     }
+           // });
         }
 
         /**
          * Device Key return
          */
         @JavascriptInterface
-        public void callDeviceKey() {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
+        public String callDeviceKey() {
+            //mHandler.post(new Runnable() {
+            //    @Override
+            //    public void run() {
                     String key = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID);
                     Log.i("BKSNP", "Device key : " + key);
-                    mWebView.loadUrl("javascript:getDeviceKey('"+key+"')");
-                }
-            });
+                    //mWebView.loadUrl("javascript:getDeviceKey('"+key+"')");
+                    return key;
+           //     }
+           // });
         }
 
         /**
          * Application cache read
          */
         @JavascriptInterface
-        public void callCacheRead(String key) {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
+        public String callCacheRead(String key) {
+            //mHandler.post(new Runnable() {
+            //    @Override
+            //    public void run() {
                     File cacheFile = new File(context.getCacheDir(), key);
                     try {
                         Scanner scanner = new Scanner(cacheFile);
@@ -678,25 +720,28 @@ public class MainActivity extends Activity {
                             String str = scanner.nextLine();
                             sb.append(str);
                         }
-                        mWebView.loadUrl("javascript:readCache('"+sb.toString()+"')");
+                        //mWebView.loadUrl("javascript:readCache('"+sb.toString()+"')");
+                        return sb.toString();
                     } catch (FileNotFoundException e) {
                         e.printStackTrace();
                     }
-                }
-            });
+                    return "";
+            //    }
+            //});
         }
 
         /**
          * firebase token data read
          */
         @JavascriptInterface
-        public void callFirebaseToken() {
-            mHandler.post(new Runnable() {
-                @Override
-                public void run() {
-                    mWebView.loadUrl("javascript:readFirebaseToken('"+mToken+"')");
-                }
-            });
+        public String callFirebaseToken() {
+            //mHandler.post(new Runnable() {
+            //    @Override
+            //    public void run() {
+            //        mWebView.loadUrl("javascript:readFirebaseToken('"+mToken+"')");
+            //    }
+            //});
+            return mToken;
         }
 
         @JavascriptInterface
