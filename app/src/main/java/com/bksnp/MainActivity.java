@@ -85,6 +85,8 @@ public class MainActivity extends Activity {
     private ValueCallback<Uri> mUploadMessage;
     private String mCameraPhotoPath;
     private Uri mCapturedImageURI;
+    private String mDirname;
+    private String mDeepLinkUrl;
 
     // Storage Permissions
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
@@ -110,7 +112,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        mDeepLinkUrl = null;
         // Token 가져오기
         FirebaseMessaging.getInstance().getToken()
                 .addOnCompleteListener(new OnCompleteListener<String>() {
@@ -141,8 +143,8 @@ public class MainActivity extends Activity {
 
         mWebSettings = mWebView.getSettings();           // 세부 세팅 등록
         mWebSettings.setJavaScriptEnabled(true);         // 자바스크립트 허용
-        //mWebSettings.setSupportMultipleWindows(true);   // 새창 띄우기 허용 여부
-        //mWebSettings.setJavaScriptCanOpenWindowsAutomatically(true);  // 자바스크립트 새창 띄우기(멀티뷰) 허용 여부
+        mWebSettings.setSupportMultipleWindows(true);   // 새창 띄우기 허용 여부
+        mWebSettings.setJavaScriptCanOpenWindowsAutomatically(true);  // 자바스크립트 새창 띄우기(멀티뷰) 허용 여부
         mWebSettings.setLoadWithOverviewMode(true);      // 메타태그 허용여부
         mWebSettings.setUseWideViewPort(true);           // 화면 사이즈 맟주기 허용 여부
         mWebSettings.setSupportZoom(false);              // 화면 줌 허용 여부
@@ -156,6 +158,7 @@ public class MainActivity extends Activity {
         // 자바스크립트 등록
         mWebView.addJavascriptInterface(new OpenCallInterface(this), "bksnp");
 
+        mWebView.clearCache(true);
         //mWebView.loadUrl("file:///android_asset/index.html");  //Constants.LOAD_URL// http://google.co.kr");  // 웹뷰에 표시할 URL
         mWebView.loadUrl(Constants.LOAD_URL);  // 웹뷰에 표시할 URL
         // Web에서 자바스크립트 alert을 허용하게 한다.
@@ -278,6 +281,15 @@ public class MainActivity extends Activity {
 //            }
 //        });
 
+        mWebView.setWebViewClient(new WebViewClient(){
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                if (mDeepLinkUrl != null) {
+                    mWebView.loadUrl("javascript:setSharedLinkData('"+ mDeepLinkUrl +"')");
+                    mDeepLinkUrl = null;
+                }
+            }
+        });
         FirebaseDynamicLinks.getInstance()
                 .getDynamicLink(getIntent())
                 .addOnSuccessListener(this, new OnSuccessListener<PendingDynamicLinkData>() {
@@ -287,7 +299,10 @@ public class MainActivity extends Activity {
                         try {
                             if (pendingDynamicLinkData != null) {
                                 deepLink = pendingDynamicLinkData.getLink();
-                                mWebView.loadUrl(deepLink.toString());
+                                //mWebView.loadUrl(deepLink.toString());
+                                Log.d(TAG, "deepLink => " + deepLink.toString());
+                                mDeepLinkUrl = deepLink.toString();
+                                //mWebView.loadUrl("javascript:setSharedLinkData('"+ deepLink.toString() +"')");
                             }
                         }
                         catch (Exception e){
@@ -301,6 +316,16 @@ public class MainActivity extends Activity {
                         Log.d("링크/에러", String.valueOf(e));
                     }
                 });
+
+        // 공유 디렉토리 생성
+        String folderName = "OHNION";
+        //File dir = Environment.getExternalStoragePublicDirectory("/ohnion");
+        File dir = new File(Environment.getExternalStorageDirectory(), folderName);
+        //File dir = new File(mContext.getFilesDir().getAbsolutePath()+File.pathSeparator + "ohnion");
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+        mDirname = dir.getAbsolutePath();
     }
 
     /**
@@ -761,6 +786,23 @@ public class MainActivity extends Activity {
 //            });
         }
 
+        /**
+         * 디렉토리명 리턴
+         * @return
+         */
+        @JavascriptInterface
+        public String callSharedDir() {
+            //mHandler.post(new Runnable() {
+            //    @Override
+            //    public void run() {
+            String dirname =mDirname;
+            Log.i("BKSNP", "Dir name : " + dirname);
+            //mWebView.loadUrl("javascript:getDeviceKey('"+key+"')");
+            return dirname;
+            //     }
+            // });
+        }
+
     }
 
     /**
@@ -867,6 +909,8 @@ public class MainActivity extends Activity {
                 Log.w("FireBaseData", "loadPost:onCancelled", databaseError.toException());
             }
         });
+
+
     }
 
     public void Create_DynamicLink(final String subject, String PageURL, String ImgUrl){

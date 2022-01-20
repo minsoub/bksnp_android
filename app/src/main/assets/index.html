@@ -84,9 +84,18 @@
     }
     function Shared() {
        var subject = "Teengle 정보 공유합니다. 많이 사용해주세요";
-       var url = "http://teengle.co.kr";
+       var url = "http://teengle.co.kr?a=3&b=4";
        var img_url = "http://jujc.yonam.ac.kr/lecture/text01/ch09/image115.jpg";
        window.bksnp.sharedTeengle(subject, url, img_url);
+    }
+
+    function SharedDir() {
+       var data = window.bksnp.callSharedDir();
+       alert(data);
+    }
+
+    function setSharedLinkData(data) {
+      alert(data);
     }
 
 
@@ -114,6 +123,8 @@
 10. getNotification(msg) : 안드로이드에서 Notification이 왔을 때 호출되는 메소드<br>
 11. setBackButton : 안드로이드에서 뒤로가기 버튼 클릭시 호출됨<br>
 12. 친구에게 공휴하기 [<a href="javascript:Shared();">클릭</a>]<br>
+13. Dirname read <a href="javascript:SharedDir();">클릭</a><br>
+14. Shared Link : setSharedLinkData(data) <br>
    </form>
 </h1>
 </body>
