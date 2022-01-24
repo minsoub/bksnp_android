@@ -33,10 +33,12 @@ import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.JsResult;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -175,20 +177,67 @@ public class MainActivity extends Activity {
 
             @Override
             public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
-                WebView newWebView = new WebView(MainActivity.this);
-                mWebView.addView(newWebView);
-                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
-                transport.setWebView(newWebView);
-                resultMsg.sendToTarget();
+//                WebView newWebView = new WebView(MainActivity.this);
+//                mWebView.addView(newWebView);
+//                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+//                transport.setWebView(newWebView);
+//                resultMsg.sendToTarget();
+//
+//                newWebView.setWebChromeClient(new WebChromeClient(){
+//                    @Override
+//                    public void onCloseWindow(WebView window) {
+//                        window.setVisibility(View.GONE);
+//                        mWebView.removeView(window);
+//                    }
+//                });
+//
+//                return true;
 
-                newWebView.setWebChromeClient(new WebChromeClient(){
+
+//                WebView newWebView = new WebView(MainActivity.this);
+//                WebSettings webSettings = newWebView.getSettings();
+//                webSettings.setJavaScriptEnabled(true);
+//                final Dialog dialog = new Dialog(MainActivity.this);
+//                dialog.setContentView(newWebView); dialog.show();
+//                newWebView.setWebChromeClient(new WebChromeClient() {
+//                    @Override public void onCloseWindow(WebView window) {
+//                        dialog.dismiss();
+//                    }
+//                });
+//                ((WebView.WebViewTransport)resultMsg.obj).setWebView(newWebView);
+//                resultMsg.sendToTarget();
+//                return true;
+
+// Dialog Create Code
+                WebView newWebView = new WebView(MainActivity.this);
+                WebSettings webSettings = newWebView.getSettings();
+                webSettings.setJavaScriptEnabled(true);
+
+                final Dialog dialog = new Dialog(MainActivity.this);
+                dialog.setContentView(newWebView);
+
+                ViewGroup.LayoutParams params = dialog.getWindow().getAttributes();
+                params.width = ViewGroup.LayoutParams.MATCH_PARENT;
+                params.height = ViewGroup.LayoutParams.MATCH_PARENT;
+                dialog.getWindow().setAttributes((android.view.WindowManager.LayoutParams) params);
+                dialog.show();
+                newWebView.setWebChromeClient(new WebChromeClient() {
                     @Override
                     public void onCloseWindow(WebView window) {
-                        window.setVisibility(View.GONE);
-                        mWebView.removeView(window);
+                        dialog.dismiss();
                     }
                 });
 
+                // WebView Popup에서 내용이 안보이고 빈 화면만 보여 아래 코드 추가
+                newWebView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                        return false;
+                    }
+                });
+
+                ((WebView.WebViewTransport)resultMsg.obj).setWebView(newWebView);
+                resultMsg.sendToTarget();
                 return true;
             };
 
