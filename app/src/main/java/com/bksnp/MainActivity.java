@@ -12,6 +12,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.Dialog;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
@@ -31,6 +32,7 @@ import android.os.Parcelable;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.JsResult;
 import android.webkit.ValueCallback;
@@ -87,6 +89,7 @@ public class MainActivity extends Activity {
     private Uri mCapturedImageURI;
     private String mDirname;
     private String mDeepLinkUrl;
+    private String mMessage;
 
     // Storage Permissions
     private static final int REQUEST_EXTERNAL_STORAGE = 1;
@@ -104,7 +107,8 @@ public class MainActivity extends Activity {
             // Get extra data included in the Intent
             String message = intent.getStringExtra("message");
             Log.d("receiver", "Got message: " + message);
-            mWebView.loadUrl("javascript:getNotification('"+message+"')");
+            mWebView.loadUrl("javascript:getNotification('" + mMessage + "')");
+            mMessage = message;
         }
     };
     //@SuppressLint("JavascriptInterface")
@@ -113,6 +117,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mDeepLinkUrl = null;
+        mMessage = null;
         // Token 가져오기
         FirebaseMessaging.getInstance().getToken()
                 .addOnCompleteListener(new OnCompleteListener<String>() {
@@ -167,120 +172,29 @@ public class MainActivity extends Activity {
             public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
                 return super.onJsAlert(view, url, message, result);
             }
+
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
+                WebView newWebView = new WebView(MainActivity.this);
+                mWebView.addView(newWebView);
+                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                transport.setWebView(newWebView);
+                resultMsg.sendToTarget();
+
+                newWebView.setWebChromeClient(new WebChromeClient(){
+                    @Override
+                    public void onCloseWindow(WebView window) {
+                        window.setVisibility(View.GONE);
+                        mWebView.removeView(window);
+                    }
+                });
+
+                return true;
+            };
+
         });
 
-//        mWebView.setWebChromeClient(new WebChromeClient() {
-//            // For Android 5.0
-//            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> filePath, WebChromeClient.FileChooserParams fileChooserParams) {
-//                // Double check that we don't have any existing callbacks
-//                if (mFilePathCallback != null) {
-//                    mFilePathCallback.onReceiveValue(null);
-//                }
-//                mFilePathCallback = filePath;
-//
-//                Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-//                if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
-//                    // Create the File where the photo should go
-//                    File photoFile = null;
-//                    //try {
-//                        photoFile = mService.getOutputMediaFile(MediaFileService.MEDIA_TYPE_IMAGE);  // createImageFile();
-//                        takePictureIntent.putExtra("PhotoPath", mCameraPhotoPath);
-//                    //} catch (IOException ex) {
-//                        // Error occurred while creating the File
-//                    //    Log.e(TAG, "Unable to create Image File", ex);
-//                    //}
-//
-//                    // Continue only if the File was successfully created
-//                    if (photoFile != null) {
-//                        mCameraPhotoPath = "file:" + photoFile.getAbsolutePath();
-//                        takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT,
-//                                Uri.fromFile(photoFile));
-//                    } else {
-//                        takePictureIntent = null;
-//                    }
-//                }
-//
-//                Intent contentSelectionIntent = new Intent(Intent.ACTION_GET_CONTENT);
-//                contentSelectionIntent.addCategory(Intent.CATEGORY_OPENABLE);
-//                contentSelectionIntent.setType("image/*");
-//
-//                Intent[] intentArray;
-//                if (takePictureIntent != null) {
-//                    intentArray = new Intent[]{takePictureIntent};
-//                } else {
-//                    intentArray = new Intent[0];
-//                }
-//
-//                Intent chooserIntent = new Intent(Intent.ACTION_CHOOSER);
-//                chooserIntent.putExtra(Intent.EXTRA_INTENT, contentSelectionIntent);
-//                chooserIntent.putExtra(Intent.EXTRA_TITLE, "Image Chooser");
-//                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, intentArray);
-//
-//                startActivityForResult(chooserIntent, INPUT_FILE_REQUEST_CODE);
-//
-//                return true;
-//            }
-//
-//            // openFileChooser for Android 3.0+
-//            public void openFileChooser(ValueCallback<Uri> uploadMsg, String acceptType) {
-//
-//                mUploadMessage = uploadMsg;
-//                // Create AndroidExampleFolder at sdcard
-//                // Create AndroidExampleFolder at sdcard
-//
-//                File imageStorageDir = new File(
-//                        Environment.getExternalStoragePublicDirectory(
-//                                Environment.DIRECTORY_PICTURES)
-//                        , "AndroidExampleFolder");
-//
-//                if (!imageStorageDir.exists()) {
-//                    // Create AndroidExampleFolder at sdcard
-//                    imageStorageDir.mkdirs();
-//                }
-//
-//                // Create camera captured image file path and name
-//                File file = new File(
-//                        imageStorageDir + File.separator + "IMG_"
-//                                + String.valueOf(System.currentTimeMillis())
-//                                + ".jpg");
-//
-//                mCapturedImageURI = Uri.fromFile(file);
-//
-//                // Camera capture image intent
-//                final Intent captureIntent = new Intent(
-//                        android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
-//
-//                captureIntent.putExtra(MediaStore.EXTRA_OUTPUT, mCapturedImageURI);
-//
-//                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
-//                i.addCategory(Intent.CATEGORY_OPENABLE);
-//                i.setType("image/*");
-//
-//                // Create file chooser intent
-//                Intent chooserIntent = Intent.createChooser(i, "Image Chooser");
-//
-//                // Set camera intent to file chooser
-//                chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS
-//                        , new Parcelable[] { captureIntent });
-//
-//                // On select image call onActivityResult method of activity
-//                startActivityForResult(chooserIntent, FILECHOOSER_RESULTCODE);
-//            }
-//
-//            // openFileChooser for Android < 3.0
-//            public void openFileChooser(ValueCallback<Uri> uploadMsg) {
-//                openFileChooser(uploadMsg, "");
-//            }
-//
-//            //openFileChooser for other Android versions
-//            public void openFileChooser(ValueCallback<Uri> uploadMsg,
-//                                        String acceptType,
-//                                        String capture) {
-//
-//                openFileChooser(uploadMsg, acceptType);
-//            }
-//        });
-
+        // 페이지 로딩이 완료되었을 때
         mWebView.setWebViewClient(new WebViewClient(){
             @Override
             public void onPageFinished(WebView view, String url) {
@@ -288,7 +202,29 @@ public class MainActivity extends Activity {
                     mWebView.loadUrl("javascript:setSharedLinkData('"+ mDeepLinkUrl +"')");
                     mDeepLinkUrl = null;
                 }
+                if (mMessage != null) {
+                    mWebView.loadUrl("javascript:getNotification('" + mMessage + "')");
+                    mMessage = null;
+                }
             }
+//            @Override
+//            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
+//                WebView newWebView = new WebView(MainActivity.this);
+//                WebSettings webSettings = newWebView.getSettings();
+//                webSettings.setJavaScriptEnabled(true);
+//                final Dialog dialog = new Dialog(MainActivity.this);
+//                dialog.setContentView(newWebView); dialog.show();
+//                newWebView.setWebChromeClient(new WebChromeClient() {
+//                    @Override
+//                    public void onCloseWindow(WebView window) {
+//                        dialog.dismiss();
+//                    }
+//                });
+//                ((WebView.WebViewTransport)resultMsg.obj).setWebView(newWebView);
+//                resultMsg.sendToTarget();
+//                return true;
+//            }
+
         });
         FirebaseDynamicLinks.getInstance()
                 .getDynamicLink(getIntent())
@@ -318,7 +254,7 @@ public class MainActivity extends Activity {
                 });
 
         // 공유 디렉토리 생성
-        String folderName = "OHNION";
+        String folderName = "Teengle";
         //File dir = Environment.getExternalStoragePublicDirectory("/ohnion");
         File dir = new File(Environment.getExternalStorageDirectory(), folderName);
         //File dir = new File(mContext.getFilesDir().getAbsolutePath()+File.pathSeparator + "ohnion");
@@ -508,11 +444,15 @@ public class MainActivity extends Activity {
         LocalBroadcastManager.getInstance(this).registerReceiver(
                 mMessageReceiver, new IntentFilter(String.valueOf(R.string.bksnp_event_name))  // "bksnp-event")
         );
+        Log.d(TAG, "activated...");
+        mWebView.loadUrl("javascript:setActivate()");
     }
     @Override
     protected void onPause() {
         super.onPause();
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
+        Log.d(TAG, "deactivated...");
+        mWebView.loadUrl("javascript:setDeactivate()");
     }
     public void getMessage(String msg) {
         Log.d(TAG, msg);
@@ -714,6 +654,75 @@ public class MainActivity extends Activity {
         }
 
         /**
+         * Teengle Base64 Internal File write
+         * @param fileKey
+         * @param data
+         */
+        @JavascriptInterface
+        public void callTeengleBase64WriteStorage(String fileKey, String data) {
+            mHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    Log.i("BKSNP", "callTeengleBase64WriteStorage call");
+                    Log.i("BKSNP", "Parameter fileKey : " + fileKey+", data : " + data);
+                    FileOutputStream fos = null;
+                    try {
+                        File dir = new File(Environment.getExternalStorageDirectory(), "Teengle");
+                        File file = new File(dir, fileKey);
+                        if (file.exists())
+                            file.delete();
+
+                        //fos = openFileOutput(fileKey, Context.MODE_PRIVATE);
+                        fos = new FileOutputStream(file);
+                        fos.write(data.getBytes());
+                        fos.close();;
+
+                    } catch (FileNotFoundException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
+
+        /**
+         * Teengle Base64 Internal File read
+         * @param fileKey
+         */
+        @JavascriptInterface
+        public String callTeengleBase64ReadStorage(String fileKey) {
+            Log.i("BKSNP", "callTeengleBase64ReadStorage call");
+            Log.i("BKSNP", "Parameter fileKey : " + fileKey);
+            StringBuffer buffer = new StringBuffer();
+            String data = null;
+            FileInputStream fis = null;
+            try {
+                File dir = new File(Environment.getExternalStorageDirectory(), "Teengle");
+                File file = new File(dir, fileKey);
+                //fis = openFileInput(fileKey);
+                fis = new FileInputStream(file);
+                BufferedReader iReader = new BufferedReader(new InputStreamReader((fis)));
+
+                data = iReader.readLine();
+                while(data != null)
+                {
+                    buffer.append(data);
+                    data = iReader.readLine();
+                }
+                buffer.append("\n");
+                iReader.close();
+                Log.i("BKSNP", "read data : " + buffer.toString());
+                return buffer.toString();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return "";
+        }
+
+        /**
          * Device Key return
          */
         @JavascriptInterface
@@ -792,15 +801,15 @@ public class MainActivity extends Activity {
          */
         @JavascriptInterface
         public String callSharedDir() {
-            //mHandler.post(new Runnable() {
-            //    @Override
-            //    public void run() {
-            String dirname =mDirname;
+            String dirname = mDirname;
             Log.i("BKSNP", "Dir name : " + dirname);
-            //mWebView.loadUrl("javascript:getDeviceKey('"+key+"')");
             return dirname;
-            //     }
-            // });
+        }
+
+        @JavascriptInterface
+        public void appClose() {
+            finishAffinity();
+            System.exit(0);
         }
 
     }
