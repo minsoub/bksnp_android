@@ -28,12 +28,14 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
+import android.os.Message;
 import android.os.Parcelable;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.JsResult;
 import android.webkit.ValueCallback;
@@ -159,6 +161,9 @@ public class MainActivity extends Activity {
         mWebSettings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.TEXT_AUTOSIZING);   // 컨텐츠 사이즈 맞추기
         //mWebSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);       // 브라우저 캐시 허용 여부
         mWebSettings.setDomStorageEnabled(true);         // 로커저장소 허용 여부
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            mWebSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        }
 
         mContext =  getApplicationContext();
         mService = new MediaFileService(mContext);
@@ -176,7 +181,7 @@ public class MainActivity extends Activity {
             }
 
             @Override
-            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, android.os.Message resultMsg) {
+            public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
 //                WebView newWebView = new WebView(MainActivity.this);
 //                mWebView.addView(newWebView);
 //                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
@@ -219,7 +224,7 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams params = dialog.getWindow().getAttributes();
                 params.width = ViewGroup.LayoutParams.MATCH_PARENT;
                 params.height = ViewGroup.LayoutParams.MATCH_PARENT;
-                dialog.getWindow().setAttributes((android.view.WindowManager.LayoutParams) params);
+                dialog.getWindow().setAttributes((WindowManager.LayoutParams) params);
                 dialog.show();
                 newWebView.setWebChromeClient(new WebChromeClient() {
                     @Override
